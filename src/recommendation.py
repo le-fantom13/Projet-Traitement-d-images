@@ -1,7 +1,7 @@
 import requests
 import json
 
-API_KEY = "AIzaSyCwFXAn9yWrD8gmpB-oo2usQDOSWtzcaWc"
+API_KEY = "Ta clé API Gemini"
 # On utilise l'un des modèles confirmés par ton diagnostic
 MODEL = "gemini-flash-latest" 
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={API_KEY}"
