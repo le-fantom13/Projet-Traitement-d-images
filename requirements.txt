@@ -1,0 +1,5 @@
+opencv-python==4.9.0.80
+pytesseract==0.3.10
+flask==3.0.0
+sqlalchemy==2.0.30
+python-dateutil==2.9.0.post0

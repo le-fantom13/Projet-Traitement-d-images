@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>IoT Anti-Gaspi Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; }
+        body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: white; margin: 0; padding: 20px; }
+        
+        .iot-grid { display: grid; grid-template-columns: 300px 1fr 1fr; gap: 20px; height: 90vh; }
+        .panel { background: var(--card); border-radius: 10px; padding: 20px; border: 1px solid #334155; display: flex; flex-direction: column; }
+        
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; font-size: 1.1rem; }
+        
+        /* Liste des capteurs */
+        .image-item { background: #334155; padding: 10px; margin-bottom: 10px; cursor: pointer; border-radius: 5px; transition: 0.3s; }
+        .image-item:hover { background: var(--accent); color: black; }
+
+        /* Status colors */
+        .status-valide { color: #4ade80; }
+        .status-alerte { color: #fbbf24; }
+        .status-perime { color: #f87171; }
+
+        /* Console d'analyse */
+        .console { background: black; padding: 15px; border-radius: 5px; font-size: 0.8rem; flex-grow: 1; overflow-y: auto; color: #4ade80; }
+        
+        /* Recommandation IA */
+        .ai-card { background: #0ea5e91a; border: 1px solid var(--accent); padding: 15px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
+        
+        .loader { display: none; color: var(--accent); }
+
+        /*Date et Heure*/
+        #clock {
+    background: #000;
+    color: var(--accent);
+    padding: 5px 15px;
+    border-radius: 4px;
+    border: 1px solid var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px; }
+    
+    </style>
+</head>
+<body>
+
+    <header style="margin-bottom: 20px; display: flex; justify-content: space-between;">
+        <h1 style="margin: 0;">🛰️ SYSTÈME IOT - ANTI-GASPI</h1>
+        <div id="clock"></div>
+    </header>
+
+    <div class="iot-grid">
+        <div class="panel">
+            <h2>📸 ENTRÉES CAPTEUR</h2>
+            <div id="image-list"></div>
+        </div>
+
+        <div class="panel">
+            <h2>⚙️ PIPELINE OCR & LOGIC</h2>
+            <div id="loader" class="loader">ANALYSE EN COURS...</div>
+            <div id="console-output" class="console">
+                > Prêt pour scan...
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>🤖 ASSISTANT CULINAIRE</h2>
+            <div id="ai-output" class="ai-card">
+                En attente d'analyse produit...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Charger les images disponibles
+        fetch('/images').then(r => r.json()).then(images => {
+            const container = document.getElementById('image-list');
+            images.forEach(img => {
+                const div = document.createElement('div');
+                div.className = 'image-item';
+                div.textContent = `📷 Scan: ${img}`;
+                div.onclick = () => runAnalysis(img);
+                container.appendChild(div);
+            });
+        });
+
+        function runAnalysis(img) {
+            document.getElementById('loader').style.display = 'block';
+            const consoleBox = document.getElementById('console-output');
+            
+            fetch(`/process/${img}`)
+                .then(r => r.json())
+                .then(data => {
+                    // Update Console (Partie B)
+                    consoleBox.innerHTML += `<br><span style="color:white">> Scan ${img}...</span>`;
+                    consoleBox.innerHTML += `<br>  [RAW TEXT]: ${data.raw_text}`;
+                    consoleBox.innerHTML += `<br>  [REGEX]: Date trouvée -> ${data.dlc}`;
+                    consoleBox.innerHTML += `<br>  [IOT STATE]: <span class="${data.status_class}">${data.status}</span>`;
+                    
+                    // Update IA (Partie C)
+                    document.getElementById('ai-output').innerHTML = data.recommendation;
+                    document.getElementById('loader').style.display = 'none';
+                    
+                    // Auto-scroll
+                    consoleBox.scrollTop = consoleBox.scrollHeight;
+                });
+        }
+
+    function updateClock() {
+        const clockElement = document.getElementById('clock');
+        const now = new Date();
+
+        // Formatage : JJ/MM/AAAA HH:MM:SS
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        clockElement.textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // Lance l'horloge toutes les secondes
+    setInterval(updateClock, 1000);
+    updateClock(); // Appel immédiat pour éviter le délai d'une seconde
+    </script>
+</body>
+</html>
