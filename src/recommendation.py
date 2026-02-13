@@ -4,7 +4,7 @@ import json
 <<<<<<< HEAD
 API_KEY = "Ta clé API Gemini"
 =======
-API_KEY = "AIzaSyCvsrA_6uO5DP9EC3xk-mCf3aZmJSC7k6I"
+API_KEY = "Clé API"
 >>>>>>> 8099031 (Amélioration Frontend et Migration Paddle)
 # On utilise l'un des modèles confirmés par ton diagnostic
 MODEL = "gemini-flash-latest" 
