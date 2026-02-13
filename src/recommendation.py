@@ -1,7 +1,11 @@
 import requests
 import json
 
+<<<<<<< HEAD
 API_KEY = "Ta clé API Gemini"
+=======
+API_KEY = "AIzaSyCvsrA_6uO5DP9EC3xk-mCf3aZmJSC7k6I"
+>>>>>>> 8099031 (Amélioration Frontend et Migration Paddle)
 # On utilise l'un des modèles confirmés par ton diagnostic
 MODEL = "gemini-flash-latest" 
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={API_KEY}"
@@ -23,7 +27,7 @@ def assistant_llm(product_name, status):
     headers = {'Content-Type': 'application/json'}
 
     try:
-        response = requests.post(URL, headers=headers, json=payload, timeout=10)
+        response = requests.post(URL, headers=headers, json=payload, timeout=30)
         res_json = response.json()
 
         if response.status_code == 200:
@@ -35,3 +39,7 @@ def assistant_llm(product_name, status):
 
     except Exception as e:
         return f"Erreur de connexion : {str(e)}"
+<<<<<<< HEAD
+=======
+    
+>>>>>>> 8099031 (Amélioration Frontend et Migration Paddle)

@@ -1,28 +1,151 @@
-#!/usr/bin/env python3
-"""
-Lancement du système de gestion de péremption alimentaire
-API Flask + simulation scanner IoT
-"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>IoT Anti-Gaspi Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; }
+        body { font-family: 'JetBrains Mono', monospace; background: var(--bg); color: white; margin: 0; padding: 20px; }
+        
+        .iot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 90vh; }
+        .panel { background: var(--card); border-radius: 10px; padding: 20px; border: 1px solid #334155; display: flex; flex-direction: column; }
 
-import os
-from src.backend.app import app  # On importe l'objet Flask depuis app.py
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; font-size: 1.1rem; }
 
-# Dossier contenant les images
-IMAGES_DIR = os.path.join("data", "images")
+        button { padding: 10px 15px; margin-bottom: 10px; background: var(--accent); border: none; border-radius: 5px; cursor: pointer; color: black; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #22d3ee; }
 
-# Vérification du dataset
-if not os.path.exists(IMAGES_DIR):
-    raise FileNotFoundError(
-        f"Dataset introuvable à {IMAGES_DIR}. "
-        "Vérifie que le dossier data/images existe et contient des images."
-    )
+        input[type="file"] { display: none; }
 
-# Message de démarrage
-print("✅ Dataset chargé avec succès")
-print(f"🌐 Nombre d'images détectées : {len([f for f in os.listdir(IMAGES_DIR) if f.lower().endswith(('.png','.jpg','.jpeg'))])}")
-print("🚀 Système de gestion de péremption alimentaire démarré")
-print("🌐 Ouvrir http://127.0.0.1:5000 dans le navigateur")
+        video { border-radius: 8px; margin-bottom: 10px; }
 
-# Lancement du serveur Flask
-if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+        .status-valide { color: #4ade80; }
+        .status-alerte { color: #fbbf24; }
+        .status-perime { color: #f87171; }
+
+        .console { background: black; padding: 15px; border-radius: 5px; font-size: 0.8rem; flex-grow: 1; overflow-y: auto; color: #4ade80; }
+        .ai-card { background: #0ea5e91a; border: 1px solid var(--accent); padding: 15px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; min-height: 100px; }
+
+        .loader { display: none; color: var(--accent); font-weight: bold; }
+
+        #clock {
+            background: #000;
+            color: var(--accent);
+            padding: 5px 15px;
+            border-radius: 4px;
+            border: 1px solid var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+<header style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <h1 style="margin: 0;">Ne gaspillez plus !!!</h1>
+    <div id="clock"></div>
+</header>
+
+<div class="iot-grid">
+    <!-- Panel Upload / Caméra -->
+    <div class="panel">
+        <h2>📸 Ajouter un produit</h2>
+        <button id="upload-btn">Importer une image</button>
+        <input type="file" id="file-input" accept="image/*">
+        <button id="camera-btn">📷 Prendre une photo</button>
+        <video id="camera-stream" autoplay playsinline style="display:none; width:100%;"></video>
+        <button id="capture-btn" style="display:none;">Capturer</button>
+
+        <div id="loader" class="loader">ANALYSE EN COURS...</div>
+    </div>
+
+    <!-- Panel Console + IA -->
+    <div class="panel">
+        <h2>⚙️ Résultats & Assistant IA</h2>
+        <div id="console-output" class="console">> Prêt pour scan...</div>
+        <h2 style="margin-top: 15px;">🤖 Recommandation</h2>
+        <div id="ai-output" class="ai-card">En attente d'analyse produit...</div>
+    </div>
+</div>
+
+<script>
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileInput = document.getElementById('file-input');
+    const cameraBtn = document.getElementById('camera-btn');
+    const video = document.getElementById('camera-stream');
+    const captureBtn = document.getElementById('capture-btn');
+    const loader = document.getElementById('loader');
+    const consoleBox = document.getElementById('console-output');
+    const aiOutput = document.getElementById('ai-output');
+
+    uploadBtn.onclick = () => fileInput.click();
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if(file) runAnalysis(file);
+    };
+
+    cameraBtn.onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        captureBtn.style.display = 'block';
+    };
+
+    captureBtn.onclick = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.style.display = 'none';
+        captureBtn.style.display = 'none';
+
+        canvas.toBlob(blob => {
+            runAnalysis(blob);
+        }, 'image/jpeg');
+    };
+
+    function runAnalysis(fileOrBlob) {
+        loader.style.display = 'block';
+
+        const formData = new FormData();
+        formData.append('image', fileOrBlob);
+
+        fetch('/process-upload', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                consoleBox.innerHTML += `<br><span style="color:white">> Analyse du produit...</span>`;
+                consoleBox.innerHTML += `<br>  [RAW TEXT]: ${data.raw_text}`;
+                consoleBox.innerHTML += `<br>  [REGEX]: Date trouvée -> ${data.dlc}`;
+                consoleBox.innerHTML += `<br>  [IOT STATE]: <span class="${data.status_class}">${data.status}</span>`;
+
+                aiOutput.innerHTML = data.recommendation;
+                loader.style.display = 'none';
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            })
+            .catch(err => {
+                consoleBox.innerHTML += `<br><span style="color:red">Erreur: ${err}</span>`;
+                loader.style.display = 'none';
+            });
+    }
+
+    function updateClock() {
+        const clockElement = document.getElementById('clock');
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2,'0');
+        const month = String(now.getMonth()+1).padStart(2,'0');
+        const year = now.getFullYear();
+        const hours = String(now.getHours()).padStart(2,'0');
+        const minutes = String(now.getMinutes()).padStart(2,'0');
+        const seconds = String(now.getSeconds()).padStart(2,'0');
+        clockElement.textContent = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
+
+</body>
+</html>

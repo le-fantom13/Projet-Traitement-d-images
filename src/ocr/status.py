@@ -8,10 +8,10 @@ def check_expiry_status(expiry_date):
     today = date.today()
     dif_jours =  (expiry_date - today).days
 
-
     if dif_jours > 3:
         return "Valide"
     elif 0 <= dif_jours <= 3:
         return "Alerte Gaspillage"
     else:
         return "Périmé"
+    
